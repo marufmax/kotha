@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css"
+      crossorigin="anonymous"
+    />
+    <title>Free Call and Mettings</title>
+  </head>
+  <body>
+    <% include layouts/app %>
+    <section class="section">
+      <div class="container">
+        <div id="notification"></div>
+        <div>
+          Camera:
+          <select id="camera"></select>
+        </div>
+        <div>
+          Audio Output:
+          <select id="audioout"></select>
+        </div>
+        <div>
+          Microphone
+          <select id="microphone"></select>
+        </div>
+        <div>
+          <b> Looks good? </b>
+          <button class="button is-primary" onClick="startStream()">
+            Start
+          </button>
+        </div>
+
+        <video autoplay></video>
+        <div class="columns">
+          <div class="column is-one-third">
+            <div class="field">
+              <label class="label" for="myName">Your name</label>
+              <input class="input" id="myName" type="text" />
+
+              <label class="label" for="message">Message</label>
+              <input class="input" id="message" type="text" />
+
+              <input class="button is-link" id="sendMessage" type="submit" />
+            </div>
+          </div>
+          <div class="column">
+            <div id="chatArea">Output: <br /></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script> -->
+    <script>
+      const videoArea = document.querySelector("video");
+      const camera = document.getElementById("camera");
+      const mic = document.getElementById("microphone");
+      videoArea.onchange = startStream;
+
+      //Chat fields
+      const myName = document.getElementById("myName");
+      const myMessage = document.getElementById("message");
+      const sendMessage = document.getElementById("sendMessage");
+      const chatArea = document.getElementById("chatArea");
+      //  const username = prompt("Please enter a nickname: ", "");
+      const _ROOM = "chat";
+
+      // startStream();
+
+      const socketio = io();
+
+      const socket = socketio.connect();
+
+      // socket.emit("ready", _ROOM);
+
+      displayMessage("Anonymous trying to join....");
+      socket.emit("showMessage");
+
+      function displayMessage(message) {
+        if (!message.name) {
+          return (chatArea.innerHTML = chatArea.innerHTML + message);
+        }
+        return (chatArea.innerHTML = `${chatArea.innerHTML}<br /><b><i>${message.name}</i></b> said <br /> ${message.message}`);
+      }
+
+      sendMessage.addEventListener("click", e => {
+        e.preventDefault();
+
+        socket.emit("sendMessage", {
+          name: myName.value,
+          message: myMessage.value
+        });
+
+        myMessage.value = "";
+        myMessage.focus();
+      });
+
+      socket.on("showMessage", message => {
+        displayMessage(message);
+      });
+
+      // List of video devices
+      const videoDevicesPromise = navigator.mediaDevices
+        .enumerateDevices()
+        .then(res => {
+          return res.filter(device => {
+            return device.kind === "videoinput";
+          });
+        });
+
+      const videoDevices = videoDevicesPromise.then(res => {
+        let optionStr = "";
+
+        res.map(list => {
+          return (optionStr +=
+            '<option value="' +
+            list.deviceId +
+            '">' +
+            list.label +
+            "</option>");
+        });
+
+        return (camera.innerHTML = optionStr);
+      });
+
+      // List of audio output devices
+      const audioDevicesPromise = navigator.mediaDevices
+        .enumerateDevices()
+        .then(res => {
+          return res.filter(device => {
+            return device.kind === "audiooutput";
+          });
+        });
+
+      const audioDevices = audioDevicesPromise.then(res => {
+        const output = document.getElementById("audioout");
+        let optionStr = "";
+
+        res.map(list => {
+          return (optionStr +=
+            '<option value="' +
+            list.deviceId +
+            '">' +
+            list.label +
+            "</option>");
+        });
+
+        output.innerHTML = optionStr;
+      });
+
+      // List of audio onput devices
+      const audioInPromise = navigator.mediaDevices
+        .enumerateDevices()
+        .then(res => {
+          return res.filter(device => {
+            return device.kind === "audioinput";
+          });
+        });
+
+      const audioInDevices = audioInPromise.then(res => {
+        let optionStr = "";
+
+        res.map(list => {
+          return (optionStr +=
+            '<option value="' +
+            list.deviceId +
+            '">' +
+            list.label +
+            "</option>");
+        });
+
+        mic.innerHTML = optionStr;
+      });
+
+      // Stream
+      function onSuccess(stream) {
+        console.log("Success! We have a stram");
+        const notification = document.getElementById("notification");
+        notification.innerHTML =
+          '<div class="notification is-success"> Success! You just joined. </div>';
+        videoArea.srcObject = stream;
+        videoArea.play();
+      }
+
+      function onError(error) {
+        const notification = document.getElementById("notification");
+        notification.innerHTML =
+          '<div class="notification is-danger"> Camera or Microphone not found </div>';
+      }
+
+      function startStream() {
+        const videoSource = camera.value;
+        const audioSource = mic.value;
+        const constrains = {
+          audio: {
+            optional: [
+              {
+                sourceId: audioSource
+              }
+            ]
+          },
+          video: {
+            optional: [
+              {
+                sourceId: videoSource
+              }
+            ]
+          }
+        };
+
+        navigator.mediaDevices
+          .getUserMedia(constrains)
+          .then(onSuccess)
+          .catch(onError);
+      }
+    </script>
+  </body>
+</html>
