@@ -19,9 +19,9 @@
     "@fortawesome/fontawesome-free": "^5.11.2",
     "babel-loader": "^8.0.6",
     "bulma": "^0.8.0",
-    "ejs-loader": "^0.3.5",
+    "ejs-loader": "^0.5.0",
     "webpack": "^4.41.2",
-    "webpack-cli": "^3.3.9",
+    "webpack-cli": "^3.3.12",
     "webpack-node-externals": "^1.7.2"
   }
 }
